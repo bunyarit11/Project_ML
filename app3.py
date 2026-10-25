@@ -850,55 +850,52 @@ with right:
     # ใบเสร็จ
     # =================================================
 
-    # สมมติว่า col_right คือคอลัมน์ฝั่งขวาที่แสดงตาราง "รายการที่เลือก"
-with col_right:
-    st.subheader("รายการที่เลือก")
-    st.dataframe(df) # หรือส่วนแสดงตารางของคุณ
+# =================================================
+    # ใบเสร็จ
+    # =================================================
 
-    # ================= 1. เตรียมข้อมูลใบเสร็จ =================
-lines = [
-    "REPRINT CHECK".center(40),
-    "STORE : 11464".center(40),
-    "CENTRAL RESTAURANT GROUP CO.,LTD.".center(40),
-    "MISTER DONUT : ROBINSON PRAJEENBURI".center(40),
-    "TAX INVOICE (ABB.)".center(40),
-    "Tax ID: 0105532021090".center(40),
-    "-" * 40,
-    f"{'1 POS1':<20}{'1003 punpan':>20}",
-    f"{'ORDER NO.127':<20}{'Customer1':>20}",
-    "-" * 40,
-    "----- TAKE AWAY -----".center(40),
-]
+    lines = [
+        "REPRINT CHECK".center(40),
+        "STORE : 11464".center(40),
+        "CENTRAL RESTAURANT GROUP CO.,LTD.".center(40),
+        "MISTER DONUT : ROBINSON PRAJEENBURI".center(40),
+        "TAX INVOICE (ABB.)".center(40),
+        "Tax ID: 0105532021090".center(40),
+        "-" * 40,
+        f"{'1 POS1':<20}{'1003 punpan':>20}",
+        f"{'ORDER NO.127':<20}{'Customer1':>20}",
+        "-" * 40,
+        "----- TAKE AWAY -----".center(40),
+    ]
 
-for row in rows:
-    tag = f" (แถม {row['แถมฟรี']})" if row.get("แถมฟรี") else ""
-    item_str = f"{row['รายการ']}{tag}"
-    qty_str = f"{row['จำนวน']}"
-    pay_val = float(row.get('ต้องจ่าย', 0))
-    lines.append(f"{qty_str:<3} {item_str:<24} {pay_val:>11.2f}")
+    for row in rows:
+        tag = f" (แถม {row['แถมฟรี']})" if row.get("แถมฟรี") else ""
+        item_str = f"{row['รายการ']}{tag}"
+        qty_str = f"{row['จำนวน']}"
+        pay_val = float(row.get("ต้องจ่าย", 0))
+        lines.append(f"{qty_str:<3} {item_str:<24} {pay_val:>11.2f}")
 
-lines += [
-    "-" * 40,
-    f"{'Sub Total':<28}{float(subtotal):>12.2f}",
-    f"{'Discount':<28}{-float(free_value):>12.2f}",
-    f"{'Total:':<28}{float(net):>10.2f} *",
-    f"{'Payment':<28}{float(net):>10.2f} *",
-    "-" * 40,
-    f"จำนวนทั้งหมด: {total_pieces} ชิ้น".center(40),
-    "-" * 40,
-    "VAT INCLUDED".center(40),
-    "Thank You".center(40),
-    "CRG Call Center : 10:00-19:00".center(40),
-    "TEL. : 1312".center(40),
-    "callcenter@crg.co.th".center(40),
-]
+    lines += [
+        "-" * 40,
+        f"{'Sub Total':<28}{float(subtotal):>12.2f}",
+        f"{'Discount':<28}{-float(free_value):>12.2f}",
+        f"{'Total:':<28}{float(net):>10.2f} *",
+        f"{'Payment':<28}{float(net):>10.2f} *",
+        "-" * 40,
+        f"จำนวนทั้งหมด: {total_pieces} ชิ้น".center(40),
+        "-" * 40,
+        "VAT INCLUDED".center(40),
+        "Thank You".center(40),
+        "CRG Call Center : 10:00-19:00".center(40),
+        "TEL. : 1312".center(40),
+        "callcenter@crg.co.th".center(40),
+    ]
 
-# ================= 2. แสดงปุ่มดาวน์โหลด =================
-st.download_button(
-    label="⬇️ ดาวน์โหลดใบเสร็จ",
-    data="\n".join(lines),
-    file_name="receipt.txt",
-    mime="text/plain",
-    use_container_width=True,
-    disabled=not rows,
-)
+    st.download_button(
+        label="⬇️ ดาวน์โหลดใบเสร็จ",
+        data="\n".join(lines),
+        file_name="receipt.txt",
+        mime="text/plain",
+        use_container_width=True,
+        disabled=not rows,
+    )
