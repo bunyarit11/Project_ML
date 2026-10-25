@@ -438,81 +438,76 @@ with right:
             st.markdown("✨ **แนะนำโปรโมชั่นสำหรับคุณ**")
             st.markdown("### 🎉 คุณได้รับโปรโมชั่นสูงสุดแล้ว")
             st.caption("ขอบคุณที่เลือก Mister Donut 🍩")
-
-   # =================================================
-    # แสดงใบเสร็จบน UI ฝั่งขวา
+            
+    # =================================================
+    # แสดงใบเสร็จบน UI ฝั่งขวา (อิงตามรูปแบบใบเสร็จจริง)
     # =================================================
     st.subheader("🧾 ใบเสร็จรับเงิน")
 
     promo_name_str = f"ซื้อ {promo[0]} แถม {promo[1]}" if promo else "-"
 
-    # 1. ส่วนสรุปโปรโมชั่นด้านบน (ชิ้นส่วนต่างบนสุด -> ชื่อโปร -> รายการในโปร -> ของแถม)
-    promo_top_html = ""
+    # 1. แยกรายการสินค้า (ส่วนต่างเกินโปรโมชั่น vs สินค้าในโปรโมชั่น)
     if promo:
-        pay_count, free_count = promo
+        pay_req, free_req = promo
+        required_pieces = pay_req + free_req
+        excess_count = max(0, total_pieces - required_pieces)
+    else:
+        excess_count = 0
+        free_req = 0
 
-        # แยกกลุ่มสินค้า: เลือกของแถมราคาถูกที่สุด
+    items_html = ""
+
+    if excess_count > 0:
+        # เรียงลำดับราคาเพื่อคัดเลือกของแถม (ของแถมคือชิ้นที่ราคาถูกที่สุด)
         sorted_items = sorted(items, key=lambda x: x[0])
-        free_items = sorted_items[:free_count]
-        remaining = sorted_items[free_count:]
-        paid_promo_items = remaining[:pay_count]
-        excess_items = remaining[pay_count:]  # ชิ้นส่วนต่างที่เกินจากโปรโมชั่น
+        free_items = sorted_items[:free_req]
+        remaining = sorted_items[free_req:]
+        paid_promo_items = remaining[:pay_req]
+        excess_items = remaining[pay_req:]  # ชิ้นส่วนต่างที่เกินจากโปรโมชั่น
 
         excess_counts = Counter(name for price, name in excess_items)
-        paid_counts = Counter(name for price, name in paid_promo_items)
+        paid_promo_counts = Counter(name for price, name in paid_promo_items)
         free_counts_promo = Counter(name for price, name in free_items)
 
-        # 1.1 แสดงชิ้นส่วนต่างบนสุด (ถ้ามี)
-        excess_html = ""
-        if excess_counts:
-            for name, qty in excess_counts.items():
-                excess_html += f"""<div style="display: flex; justify-content: space-between;">
-<span>{qty}</span>
-<span>{name}</span>
-</div>"""
-            excess_html += """<div style="border-bottom: 1px dashed #888; margin: 6px 0;"></div>"""
-
-        # 1.2 ชื่อโปรโมชั่น (เช่น 9 Free 4)
-        promo_title = f"{pay_count} Free {free_count}"
-
-        # 1.3 รายการสินค้าที่จ่ายในโปรโมชั่น
-        paid_html = ""
-        for name, qty in paid_counts.items():
-            paid_html += f"""<div style="display: flex; justify-content: space-between;">
-<span>{qty}</span>
-<span>{name}</span>
+        # 1.1 แสดงสินค้าส่วนต่างบนสุดก่อน
+        for name, qty in excess_counts.items():
+            pay_val = qty * PRICE_MAP[name]
+            items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+<span style="width: 20px;">{qty}</span>
+<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{name}</span>
+<span style="font-weight: bold;">{pay_val:.2f}</span>
 </div>"""
 
-        # 1.4 รายการของแถมฟรี
-        free_html = ""
-        for name, qty in free_counts_promo.items():
-            free_html += f"""<div style="display: flex; justify-content: space-between;">
-<span>{qty}</span>
-<span>{name}</span>
+        # 1.2 แสดงสินค้าที่อยู่ในโปรโมชั่นต่อมา
+        all_promo_names = list(dict.fromkeys([name for price, name in paid_promo_items + free_items]))
+        for name in all_promo_names:
+            free_qty = free_counts_promo.get(name, 0)
+            paid_qty = paid_promo_counts.get(name, 0)
+            total_qty = paid_qty + free_qty
+            pay_val = paid_qty * PRICE_MAP[name]
+            tag = f" (แถม {free_qty})" if free_qty > 0 else ""
+            item_str = f"{name}{tag}"
+            items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+<span style="width: 20px;">{total_qty}</span>
+<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{item_str}</span>
+<span style="font-weight: bold;">{pay_val:.2f}</span>
 </div>"""
-
-        promo_top_html = f"""{excess_html}<div style="text-align: center; font-weight: bold;">{promo_title}</div>
-<div style="border-bottom: 2px solid #111; margin: 4px 0;"></div>
-{paid_html}
-<div style="border-bottom: 2px solid #111; margin: 4px 0;"></div>
-<div style="font-weight: bold; margin-top: 4px;">Free donut</div>
-{free_html}
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>"""
-
-    # 2. รายการสินค้าทั้งหมดในใบเสร็จ
-    items_html = ""
-    for row in rows:
-        tag = f" (แถม {row['แถมฟรี']})" if row.get("แถมฟรี") else ""
-        item_str = f"{row['รายการ']}{tag}"
-        qty_str = f"{row['จำนวน']}"
-        pay_val = float(row.get("ต้องจ่าย", 0))
-
-        items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-<span style="width: 20px;">{qty_str}</span>
+    else:
+        # กรณีไม่มีส่วนต่าง แสดงรายการตามปกติ
+        free_counts = Counter(name for price, name in sorted(items, key=lambda x: x[0])[:free_req])
+        for name, quantity in edited.items():
+            if quantity > 0:
+                free_quantity = free_counts.get(name, 0)
+                pay_val = (quantity - free_quantity) * PRICE_MAP[name]
+                tag = f" (แถม {free_quantity})" if free_quantity > 0 else ""
+                item_str = f"{name}{tag}"
+                items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+<span style="width: 20px;">{quantity}</span>
 <span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{item_str}</span>
 <span style="font-weight: bold;">{pay_val:.2f}</span>
 </div>"""
 
+    # 2. โครงสร้างใบเสร็จ HTML
     receipt_html = f"""<div style="background-color: #ffffff; color: #111111; font-family: 'Courier New', Courier, monospace; font-size: 13px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); max-width: 360px; margin: 10px auto; line-height: 1.4;">
 <div style="text-align: center; font-weight: bold;">
 <div>REPRINT CHECK</div>
@@ -532,16 +527,9 @@ with right:
 <span>Customer1</span>
 </div>
 <div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-
-{promo_top_html}
-
 <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">----- TAKE AWAY -----</div>
 {items_html}
 <div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="display: flex; justify-content: space-between;">
-<span>FREE</span>
-<span style="font-weight: bold; color: #28a745;">{free_count} ชิ้น</span>
-</div>
 <div style="display: flex; justify-content: space-between;">
 <span>Sub Total</span>
 <span>{float(subtotal):.2f}</span>
