@@ -53,7 +53,6 @@ PRICE_MAP = {
 # โปรโมชั่น
 # =====================================================
 
-# (จำนวนที่จ่าย, จำนวนที่แถม)
 PROMOTION_TIERS = [
     (5, 1),
     (7, 2),
@@ -63,66 +62,32 @@ PROMOTION_TIERS = [
 
 
 def get_promotion(total):
-    """
-    หาสิทธิ์โปรโมชั่นสูงสุด
-    ที่จำนวนสินค้าปัจจุบันเข้าเงื่อนไข
-    """
-
     best = None
-
     for pay, free in PROMOTION_TIERS:
-
         required = pay + free
-
         if total >= required:
-
-            if (
-                best is None
-                or required > best[0] + best[1]
-            ):
+            if best is None or required > best[0] + best[1]:
                 best = (pay, free)
-
     return best
 
 
 def get_next_promotion(total):
-    """
-    หาโปรโมชั่นถัดไป
-    ที่ลูกค้ายังต้องซื้อเพิ่ม
-    """
-
     for pay, free in PROMOTION_TIERS:
-
         required = pay + free
-
         if total < required:
-
             return {
                 "pay": pay,
                 "free": free,
                 "required": required,
                 "extra": required - total,
             }
-
     return None
 
 
 def calculate_free_items(items, free_count):
-    """
-    เลือกของแถมจากสินค้าที่ราคาถูกที่สุด
-    """
-
-    sorted_items = sorted(
-        items,
-        key=lambda x: x[0]
-    )
-
+    sorted_items = sorted(items, key=lambda x: x[0])
     free_items = sorted_items[:free_count]
-
-    return Counter(
-        name
-        for price, name in free_items
-    )
+    return Counter(name for price, name in free_items)
 
 
 # =====================================================
@@ -191,55 +156,25 @@ model = load_model()
 # =====================================================
 
 def remove_overlaps(r, thr=IOMA_THRESHOLD):
-
     if len(r.boxes) == 0:
         return r
 
     xyxy = r.boxes.xyxy.cpu().numpy()
     conf = r.boxes.conf.cpu().numpy()
 
-    area = (
-        (xyxy[:, 2] - xyxy[:, 0]) *
-        (xyxy[:, 3] - xyxy[:, 1])
-    )
-
+    area = (xyxy[:, 2] - xyxy[:, 0]) * (xyxy[:, 3] - xyxy[:, 1])
     keep = []
 
     for i in conf.argsort()[::-1]:
-
         ok = True
-
         for j in keep:
+            ix1 = max(xyxy[i, 0], xyxy[j, 0])
+            iy1 = max(xyxy[i, 1], xyxy[j, 1])
+            ix2 = min(xyxy[i, 2], xyxy[j, 2])
+            iy2 = min(xyxy[i, 3], xyxy[j, 3])
 
-            ix1 = max(
-                xyxy[i, 0],
-                xyxy[j, 0]
-            )
-
-            iy1 = max(
-                xyxy[i, 1],
-                xyxy[j, 1]
-            )
-
-            ix2 = min(
-                xyxy[i, 2],
-                xyxy[j, 2]
-            )
-
-            iy2 = min(
-                xyxy[i, 3],
-                xyxy[j, 3]
-            )
-
-            inter = (
-                max(0, ix2 - ix1) *
-                max(0, iy2 - iy1)
-            )
-
-            smaller = max(
-                min(area[i], area[j]),
-                1e-6
-            )
+            inter = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+            smaller = max(min(area[i], area[j]), 1e-6)
 
             if inter / smaller > thr:
                 ok = False
@@ -255,23 +190,10 @@ def remove_overlaps(r, thr=IOMA_THRESHOLD):
 # ย่อรูปสำหรับแสดงผล
 # =====================================================
 
-def to_display(
-    arr_or_img,
-    max_side=DISPLAY_MAX
-):
-
-    im = (
-        arr_or_img
-        if isinstance(arr_or_img, Image.Image)
-        else Image.fromarray(arr_or_img)
-    )
-
+def to_display(arr_or_img, max_side=DISPLAY_MAX):
+    im = arr_or_img if isinstance(arr_or_img, Image.Image) else Image.fromarray(arr_or_img)
     im = im.copy()
-
-    im.thumbnail(
-        (max_side, max_side)
-    )
-
+    im.thumbnail((max_side, max_side))
     return im
 
 
@@ -280,7 +202,6 @@ def to_display(
 # =====================================================
 
 with st.sidebar:
-
     st.header("⚙️ ตั้งค่า")
 
     conf = st.slider(
@@ -293,41 +214,18 @@ with st.sidebar:
     )
 
     with st.expander("ขั้นสูง"):
-
-        iou = st.slider(
-            "IoU (NMS)",
-            0.10,
-            0.90,
-            0.45,
-            0.05
-        )
-
-        ioma = st.slider(
-            "IoMA (ตัดกรอบซ้อนใน)",
-            0.30,
-            0.95,
-            IOMA_THRESHOLD,
-            0.05
-        )
+        iou = st.slider("IoU (NMS)", 0.10, 0.90, 0.45, 0.05)
+        ioma = st.slider("IoMA (ตัดกรอบซ้อนใน)", 0.30, 0.95, IOMA_THRESHOLD, 0.05)
 
     with st.expander("💰 ราคา / โปรโมชั่น"):
-
         st.caption("ราคาต่อชิ้น")
-
         for name, price in PRICE_MAP.items():
-
-            st.write(
-                f"• {name}: {price} บาท"
-            )
+            st.write(f"• {name}: {price} บาท")
 
         st.divider()
 
         for pay, free in PROMOTION_TIERS:
-
-            st.write(
-                f"• ซื้อ {pay} แถม {free} "
-                f"({pay + free} ชิ้น)"
-            )
+            st.write(f"• ซื้อ {pay} แถม {free} ({pay + free} ชิ้น)")
 
 
 # =====================================================
@@ -343,28 +241,16 @@ st.caption(
 
 
 with st.container(border=True):
-
-    tab_upload, tab_camera = st.tabs(
-        [
-            "📁 อัปโหลดรูป",
-            "📷 ถ่ายรูป"
-        ]
-    )
+    tab_upload, tab_camera = st.tabs(["📁 อัปโหลดรูป", "📷 ถ่ายรูป"])
 
     with tab_upload:
-
         up_file = st.file_uploader(
             "เลือกรูปโดนัท",
-            type=[
-                "jpg",
-                "jpeg",
-                "png"
-            ],
+            type=["jpg", "jpeg", "png"],
             label_visibility="collapsed"
         )
 
     with tab_camera:
-
         cam_file = st.camera_input(
             "ถ่ายรูปโดนัท",
             label_visibility="collapsed"
@@ -375,11 +261,7 @@ file = up_file or cam_file
 
 
 if not file:
-
-    st.info(
-        "เริ่มต้นโดยอัปโหลดรูปหรือถ่ายรูปโดนัทด้านบน"
-    )
-
+    st.info("เริ่มต้นโดยอัปโหลดรูปหรือถ่ายรูปโดนัทด้านบน")
     st.stop()
 
 
@@ -387,16 +269,11 @@ if not file:
 # ตรวจจับภาพ
 # =====================================================
 
-img = ImageOps.exif_transpose(
-    Image.open(file)
-).convert("RGB")
-
-
+img = ImageOps.exif_transpose(Image.open(file)).convert("RGB")
 img_bgr = np.array(img)[:, :, ::-1]
 
 
 with st.spinner("กำลังตรวจจับ..."):
-
     r = model.predict(
         img_bgr,
         imgsz=IMGSZ,
@@ -407,53 +284,26 @@ with st.spinner("กำลังตรวจจับ..."):
         verbose=False,
     )[0]
 
-    r = remove_overlaps(
-        r,
-        ioma
-    )
+    r = remove_overlaps(r, ioma)
 
 
 plotted_rgb = r.plot()[:, :, ::-1]
 
+counts = Counter(r.names[int(b.cls[0])] for b in r.boxes)
 
-counts = Counter(
-    r.names[int(b.cls[0])]
-    for b in r.boxes
-)
-
-
-unknown = [
-    name
-    for name in counts
-    if name not in PRICE_MAP
-]
-
+unknown = [name for name in counts if name not in PRICE_MAP]
 
 if unknown:
+    st.warning(f"คลาสที่ยังไม่มีราคาใน PRICE_MAP: {unknown}")
 
-    st.warning(
-        f"คลาสที่ยังไม่มีราคาใน PRICE_MAP: {unknown}"
-    )
-
-
-file_id = (
-    getattr(
-        file,
-        "file_id",
-        None
-    )
-    or f"{file.name}_{file.size}"
-)
+file_id = getattr(file, "file_id", None) or f"{file.name}_{file.size}"
 
 
 # =====================================================
 # Layout หลัก
 # =====================================================
 
-left, right = st.columns(
-    [3, 2],
-    gap="large"
-)
+left, right = st.columns([3, 2], gap="large")
 
 
 # =====================================================
@@ -461,133 +311,69 @@ left, right = st.columns(
 # =====================================================
 
 with left:
-
-    st.subheader(
-        "ผลการตรวจจับ"
-    )
-
+    st.subheader("ผลการตรวจจับ")
     c1, c2 = st.columns(2)
 
-
     with c1:
-
-        st.image(
-            to_display(img),
-            caption="ต้นฉบับ"
-        )
-
+        st.image(to_display(img), caption="ต้นฉบับ")
 
     with c2:
+        st.image(to_display(plotted_rgb), caption=f"ตรวจพบ {len(r.boxes)} ชิ้น")
 
-        st.image(
-            to_display(plotted_rgb),
-            caption=f"ตรวจพบ {len(r.boxes)} ชิ้น"
-        )
-
-
-    with st.expander(
-        "✏️ ตรวจสอบ/แก้จำนวนแต่ละรส",
-        expanded=True
-    ):
-
+    with st.expander("✏️ ตรวจสอบ/แก้จำนวนแต่ละรส", expanded=True):
         st.caption(
             "โมเดลอาจนับผิดรสหรือขาด/เกิน "
             "แก้จำนวนตรงนี้ได้ก่อนคิดเงิน"
         )
 
         edited = {}
-
         cols = st.columns(3)
 
-
         for i, name in enumerate(PRICE_MAP):
-
-            edited[name] = cols[
-                i % 3
-            ].number_input(
-
-                f"{name} "
-                f"(฿ {PRICE_MAP[name]})",
-
+            edited[name] = cols[i % 3].number_input(
+                f"{name} (฿ {PRICE_MAP[name]})",
                 min_value=0,
-
-                value=int(
-                    counts.get(
-                        name,
-                        0
-                    )
-                ),
-
+                value=int(counts.get(name, 0)),
                 step=1,
-
-                key=(
-                    f"{file_id}_{name}"
-                ),
+                key=f"{file_id}_{name}",
             )
 
-# =====================================================
-# โปรโมชั่นที่ได้รับแล้ว
-# =====================================================
-
-promo = get_promotion(
-    total_pieces
-)
-
-
-free_count = (
-    promo[1]
-    if promo
-    else 0
-)
-
-
-free_counts = calculate_free_items(
-    items,
-    free_count
-)
-
 
 # =====================================================
-# ราคารวม
+# คำนวณรายการสินค้า และ โปรโมชั่น (คำนวณก่อนแสดงผลฝั่งขวา)
 # =====================================================
 
-subtotal = sum(
-    price
-    for price, name in items
-)
+items = [
+    (PRICE_MAP[name], name)
+    for name, quantity in edited.items()
+    for _ in range(quantity)
+]
 
+total_pieces = len(items)
 
-# =====================================================
-# มูลค่าของแถม
-# =====================================================
+promo = get_promotion(total_pieces)
+free_count = promo[1] if promo else 0
+free_counts = calculate_free_items(items, free_count)
 
-free_value = sum(
+subtotal = sum(price for price, name in items)
+free_value = sum(PRICE_MAP[name] * quantity for name, quantity in free_counts.items())
+net = subtotal - free_value
+next_promo = get_next_promotion(total_pieces)
 
-    PRICE_MAP[name] * quantity
-
-    for name, quantity
-    in free_counts.items()
-
-)
-
-
-# =====================================================
-# ยอดชำระ
-# =====================================================
-
-net = (
-    subtotal
-    - free_value
-)
-
-
-# =====================================================
-# โปรโมชั่นถัดไป
-# =====================================================
-
-next_promo = get_next_promotion(
-    total_pieces
-)
+# เตรียมข้อมูล rows สำหรับแสดงในใบเสร็จ
+rows = []
+for name, quantity in edited.items():
+    if quantity > 0:
+        free_quantity = free_counts.get(name, 0)
+        rows.append(
+            {
+                "รายการ": name,
+                "จำนวน": quantity,
+                "แถมฟรี": free_quantity,
+                "ราคา/ชิ้น": PRICE_MAP[name],
+                "ต้องจ่าย": (quantity - free_quantity) * PRICE_MAP[name],
+            }
+        )
 
 
 # =====================================================
@@ -595,303 +381,39 @@ next_promo = get_next_promotion(
 # =====================================================
 
 with right:
-
-    st.subheader(
-        "สรุปยอด"
-    )
-
+    st.subheader("สรุปยอด")
 
     with st.container(border=True):
-
         a, b = st.columns(2)
 
-
-        a.metric(
-            "จำนวนทั้งหมด",
-            f"{total_pieces} ชิ้น"
-        )
-
-
-        b.metric(
-            "ราคารวม",
-            f"{subtotal} บาท"
-        )
-
-
-        a.metric(
-            "ส่วนลดของแถม",
-            f"-{free_value} บาท"
-        )
-
-
-        b.metric(
-            "ยอดชำระ",
-            f"{net} บาท"
-        )
-
+        a.metric("จำนวนทั้งหมด", f"{total_pieces} ชิ้น")
+        b.metric("ราคารวม", f"{subtotal} บาท")
+        a.metric("ส่วนลดของแถม", f"-{free_value} บาท")
+        b.metric("ยอดชำระ", f"{net} บาท")
 
         # ---------------------------------------------
         # โปรโมชั่นที่ได้รับแล้ว
         # ---------------------------------------------
-
         if promo:
-
-            st.success(
-                f"🎉 ได้รับโปรโมชั่น "
-                f"ซื้อ {promo[0]} แถม {promo[1]}"
-            )
-
-
-            st.markdown(
-                "**🎁 รายการของแถมฟรี**"
-            )
-
+            st.success(f"🎉 ได้รับโปรโมชั่น ซื้อ {promo[0]} แถม {promo[1]}")
+            st.markdown("**🎁 รายการของแถมฟรี**")
 
             for name, quantity in free_counts.items():
-
                 st.write(
                     f"• {name} × {quantity} "
-                    f"(มูลค่า "
-                    f"{PRICE_MAP[name] * quantity} บาท)"
+                    f"(มูลค่า {PRICE_MAP[name] * quantity} บาท)"
                 )
-
-
         else:
-
-            st.info(
-                "ยังไม่เข้าโปรโมชั่น "
-                "ซื้อครบ 6 ชิ้น รับฟรี 1 ชิ้น"
-            )
-
+            st.info("ยังไม่เข้าโปรโมชั่น ซื้อครบ 6 ชิ้น รับฟรี 1 ชิ้น")
 
         # ---------------------------------------------
         # แนะนำโปรโมชั่น
-        # ไม่มีกรอบสีน้ำเงิน
         # ---------------------------------------------
-
         if next_promo:
+            required = next_promo["required"]
+            extra = next_promo["extra"]
+            pay = next_promo["pay"]
+            free = next_promo["free"]
+            progress = min(total_pieces / required, 1.0)
 
-            required = (
-                next_promo["required"]
-            )
-
-            extra = (
-                next_promo["extra"]
-            )
-
-            pay = (
-                next_promo["pay"]
-            )
-
-            free = (
-                next_promo["free"]
-            )
-
-
-            progress = min(
-                total_pieces / required,
-                1.0
-            )
-
-
-            # หัวข้อ
-
-            st.markdown(
-                "✨ **แนะนำโปรโมชั่นสำหรับคุณ**"
-            )
-
-
-            # ข้อความโปรโมชั่น
-
-            if extra > 0:
-
-                st.markdown(
-                    f"### ซื้อเพิ่มอีก {extra} ชิ้น 🍩"
-                )
-
-
-                st.markdown(
-                    f"""
-เพื่อให้ครบ **{required} ชิ้น**
-
-รับโปรโมชั่น **ซื้อ {pay} แถม {free}**
-
-รวมทั้งหมด {required} ชิ้น
-"""
-                )
-
-
-            else:
-
-                st.markdown(
-                    "### 🎉 เข้าโปรโมชั่นแล้ว!"
-                )
-
-
-                st.markdown(
-                    f"ซื้อ {pay} แถม {free}"
-                )
-
-
-            # Progress bar
-
-            st.progress(
-                progress
-            )
-
-
-            st.caption(
-                f"ความคืบหน้า "
-                f"{total_pieces}/{required} ชิ้น"
-            )
-
-
-        else:
-
-            st.markdown(
-                "✨ **แนะนำโปรโมชั่นสำหรับคุณ**"
-            )
-
-
-            st.markdown(
-                "### 🎉 คุณได้รับโปรโมชั่นสูงสุดแล้ว"
-            )
-
-
-            st.caption(
-                "ขอบคุณที่เลือก Mister Donut 🍩"
-            )
-
-
-    # =================================================
-    # รายการสินค้า
-    # =================================================
-
-    st.markdown(
-        "**รายการที่เลือก**"
-    )
-
-
-    rows = []
-
-
-    for name, quantity in edited.items():
-
-        if quantity > 0:
-
-            free_quantity = (
-                free_counts.get(
-                    name,
-                    0
-                )
-            )
-
-
-            rows.append(
-                {
-                    "รายการ": name,
-
-                    "จำนวน": quantity,
-
-                    "แถมฟรี": free_quantity,
-
-                    "ราคา/ชิ้น":
-                        PRICE_MAP[name],
-
-                    "ต้องจ่าย":
-                        (
-                            quantity
-                            - free_quantity
-                        )
-                        * PRICE_MAP[name],
-                }
-            )
-
-
-    if rows:
-
-        st.dataframe(
-            pd.DataFrame(rows),
-            hide_index=True,
-            use_container_width=True
-        )
-
-
-    else:
-
-        st.caption(
-            "ยังไม่มีรายการ"
-        )
-
-
-  # =================================================
-    # แสดงใบเสร็จบน UI
-    # =================================================
-    st.subheader("🧾 ใบเสร็จรับเงิน")
-
-    items_html = ""
-    for row in rows:
-        tag = f" (แถม {row['แถมฟรี']})" if row.get("แถมฟรี") else ""
-        item_str = f"{row['รายการ']}{tag}"
-        qty_str = f"{row['จำนวน']}"
-        pay_val = float(row.get("ต้องจ่าย", 0))
-
-        items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-<span style="width: 20px;">{qty_str}</span>
-<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{item_str}</span>
-<span style="font-weight: bold;">{pay_val:.2f}</span>
-</div>"""
-
-    receipt_html = f"""<div style="background-color: #ffffff; color: #111111; font-family: 'Courier New', Courier, monospace; font-size: 13px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); max-width: 360px; margin: 10px auto; line-height: 1.4;">
-<div style="text-align: center; font-weight: bold;">
-<div>REPRINT CHECK</div>
-<div>STORE : 11464</div>
-<div style="font-size: 11px;">CENTRAL RESTAURANT GROUP CO.,LTD.</div>
-<div style="font-size: 11px;">MISTER DONUT : ROBINSON PRAJEENBURI</div>
-<div>TAX INVOICE (ABB.)</div>
-<div>Tax ID: 0105532021090</div>
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="display: flex; justify-content: space-between;">
-<span>1 POS1</span>
-<span>1003 punpan</span>
-</div>
-<div style="display: flex; justify-content: space-between; font-weight: bold;">
-<span>ORDER NO.127</span>
-<span>Customer1</span>
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="text-align: center; font-weight: bold; margin-bottom: 8px;">----- TAKE AWAY -----</div>
-{items_html}
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="display: flex; justify-content: space-between;">
-<span>Sub Total</span>
-<span>{float(subtotal):.2f}</span>
-</div>
-<div style="display: flex; justify-content: space-between;">
-<span>Discount</span>
-<span>{-float(free_value):.2f}</span>
-</div>
-<div style="display: flex; justify-content: space-between; font-weight: bold;">
-<span>Total:</span>
-<span>{float(net):.2f} *</span>
-</div>
-<div style="display: flex; justify-content: space-between; font-weight: bold;">
-<span>Payment</span>
-<span>{float(net):.2f} *</span>
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="text-align: center; font-weight: bold; margin: 6px 0;">
-จำนวนทั้งหมด: {total_pieces} ชิ้น
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="text-align: center; font-size: 11px; color: #444;">
-<div>VAT INCLUDED</div>
-<div>Thank You</div>
-<div>CRG Call Center : 10:00-19:00</div>
-<div>TEL. : 1312</div>
-<div>callcenter@crg.co.th</div>
-</div>
-</div>"""
-
-    st.markdown(receipt_html, unsafe_allow_html=True)
+            st.markdown("✨ **แนะนำโปรโมชั่นสำหรับคุณ**")
