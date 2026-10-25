@@ -457,60 +457,27 @@ with right:
 <span style="font-weight: bold;">{pay_val:.2f}</span>
 </div>"""
 
-    receipt_html = f"""<div style="background-color: #ffffff; color: #111111; font-family: 'Courier New', Courier, monospace; font-size: 13px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); max-width: 360px; margin: 10px auto; line-height: 1.4;">
-<div style="text-align: center; font-weight: bold;">
-<div>REPRINT CHECK</div>
-<div>STORE : 11464</div>
-<div style="font-size: 11px;">CENTRAL RESTAURANT GROUP CO.,LTD.</div>
-<div style="font-size: 11px;">MISTER DONUT : ROBINSON PRAJEENBURI</div>
-<div>TAX INVOICE (ABB.)</div>
-<div>Tax ID: 0105532021090</div>
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="display: flex; justify-content: space-between;">
-<span>1 POS1</span>
-<span>1003 punpan</span>
-</div>
-<div style="display: flex; justify-content: space-between; font-weight: bold;">
-<span>ORDER NO.127</span>
-<span>Customer1</span>
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="text-align: center; font-weight: bold; margin-bottom: 8px;">----- TAKE AWAY -----</div>
-{items_html}
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="display: flex; justify-content: space-between;">
-<span>Sub Total</span>
-<span>{float(subtotal):.2f}</span>
-</div>
-<div style="display: flex; justify-content: space-between;">
-<span>PROMOTION</span>
-<span style="font-weight: bold; color: #d9534f;">{promo_name_str}</span>
-</div>
-<div style="display: flex; justify-content: space-between;">
-<span>Discount</span>
-<span>{-float(free_value):.2f}</span>
-</div>
-<div style="display: flex; justify-content: space-between; font-weight: bold;">
-<span>Total:</span>
-<span>{float(net):.2f} *</span>
-</div>
-<div style="display: flex; justify-content: space-between; font-weight: bold;">
-<span>Payment</span>
-<span>{float(net):.2f} *</span>
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="text-align: center; font-weight: bold; margin: 6px 0;">
-จำนวนทั้งหมด: {total_pieces} ชิ้น
-</div>
-<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
-<div style="text-align: center; font-size: 11px; color: #444;">
-<div>VAT INCLUDED</div>
-<div>Thank You</div>
-<div>CRG Call Center : 10:00-19:00</div>
-<div>TEL. : 1312</div>
-<div>callcenter@crg.co.th</div>
-</div>
-</div>"""
+    receipt_html = f"""<div style="...">
+    ... (รายการสินค้า) ...
+    <div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
 
-    st.markdown(receipt_html, unsafe_allow_html=True)
+    <!-- ⬇️ เพิ่มบรรทัด FREE ไว้บน Sub Total ตรงนี้ ⬇️ -->
+    <div style="display: flex; justify-content: space-between;">
+        <span>FREE</span>
+        <span style="font-weight: bold; color: #28a745;">{free_count} ชิ้น</span>
+    </div>
+
+    <div style="display: flex; justify-content: space-between;">
+        <span>Sub Total</span>
+        <span>{float(subtotal):.2f}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between;">
+        <span>PROMOTION</span>
+        <span style="font-weight: bold; color: #d9534f;">{promo_name_str}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between;">
+        <span>Discount</span>
+        <span>{-float(free_value):.2f}</span>
+    </div>
+    ... (ส่วนท้ายใบเสร็จ) ...
+    """
