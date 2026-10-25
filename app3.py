@@ -440,79 +440,66 @@ with right:
             st.caption("ขอบคุณที่เลือก Mister Donut 🍩")
             
     # =================================================
-    # แสดงใบเสร็จบน UI ฝั่งขวา (แยกส่วนต่างไว้บน TAKE AWAY)
+    # แสดงใบเสร็จบน UI ฝั่งขวา 
     # =================================================
     st.subheader("🧾 ใบเสร็จรับเงิน")
 
     promo_name_str = f"ซื้อ {promo[0]} แถม {promo[1]}" if promo else "-"
 
+    # แยกรายการสินค้าตามโครงสร้างโปรโมชั่น
     if promo:
         pay_req, free_req = promo
         required_pieces = pay_req + free_req
-        excess_count = max(0, total_pieces - required_pieces)
-    else:
-        excess_count = 0
-        free_req = 0
 
-    excess_html = ""
-    takeaway_items_html = ""
-
-    if excess_count > 0:
-        # เรียงลำดับราคาเพื่อคัดเลือกของแถม (ของแถมคือชิ้นที่ราคาถูกที่สุด)
         sorted_items = sorted(items, key=lambda x: x[0])
         free_items = sorted_items[:free_req]
         remaining = sorted_items[free_req:]
         paid_promo_items = remaining[:pay_req]
-        excess_items = remaining[pay_req:]  # ชิ้นส่วนต่างที่เกินโปรโมชั่น
+        excess_items = remaining[pay_req:]  # สินค้าส่วนต่างเกินโปรโมชั่น
 
         excess_counts = Counter(name for price, name in excess_items)
         paid_promo_counts = Counter(name for price, name in paid_promo_items)
         free_counts_promo = Counter(name for price, name in free_items)
+    else:
+        pay_req, free_req = 0, 0
+        excess_counts = Counter(name for price, name in items)
+        paid_promo_counts = Counter()
+        free_counts_promo = Counter()
 
-        # 1. รายการส่วนต่าง (วางไว้บนสุด เหนือ TAKE AWAY)
+    # สร้าง HTML รายการสินค้าใน TAKE AWAY
+    takeaway_content_html = ""
+
+    # 1. สินค้าส่วนต่าง (ถ้ามี)
+    if excess_counts:
         for name, qty in excess_counts.items():
             pay_val = qty * PRICE_MAP[name]
-            excess_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            takeaway_content_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
 <span style="width: 20px;">{qty}</span>
 <span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{name}</span>
 <span style="font-weight: bold;">{pay_val:.2f}</span>
 </div>"""
 
-        # 2. รายการสินค้าโปรโมชั่น (วางในส่วน TAKE AWAY)
-        all_promo_names = list(dict.fromkeys([name for price, name in paid_promo_items + free_items]))
-        for name in all_promo_names:
-            free_qty = free_counts_promo.get(name, 0)
-            paid_qty = paid_promo_counts.get(name, 0)
-            total_qty = paid_qty + free_qty
-            pay_val = paid_qty * PRICE_MAP[name]
-            tag = f" (แถม {free_qty})" if free_qty > 0 else ""
-            item_str = f"{name}{tag}"
-            takeaway_items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-<span style="width: 20px;">{total_qty}</span>
-<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{item_str}</span>
-<span style="font-weight: bold;">{pay_val:.2f}</span>
-</div>"""
-    else:
-        # กรณีไม่มีส่วนต่าง สินค้าทั้งหมดอยู่ใน TAKE AWAY
-        free_counts = Counter(name for price, name in sorted(items, key=lambda x: x[0])[:free_req])
-        for name, quantity in edited.items():
-            if quantity > 0:
-                free_quantity = free_counts.get(name, 0)
-                pay_val = (quantity - free_quantity) * PRICE_MAP[name]
-                tag = f" (แถม {free_quantity})" if free_quantity > 0 else ""
-                item_str = f"{name}{tag}"
-                takeaway_items_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-<span style="width: 20px;">{quantity}</span>
-<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{item_str}</span>
+    # 2. หัวข้อโปรโมชั่น และ สินค้าจ่ายเงินในโปรโมชั่น
+    if promo and paid_promo_counts:
+        takeaway_content_html += f"""<div style="font-weight: bold; margin-top: 6px; margin-bottom: 4px;">Promotion {pay_req} Free {free_req}</div>"""
+        for name, qty in paid_promo_counts.items():
+            pay_val = qty * PRICE_MAP[name]
+            takeaway_content_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+<span style="width: 20px;">{qty}</span>
+<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{name}</span>
 <span style="font-weight: bold;">{pay_val:.2f}</span>
 </div>"""
 
-    # บล็อกส่วนต่างถ้ามี (แทรกเส้นประคั่นล่าง)
-    top_excess_block = ""
-    if excess_html:
-        top_excess_block = f"""{excess_html}<div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>"""
+    # 3. เส้นแบ่ง Free และ รายการสินค้าแถมฟรี
+    if promo and free_counts_promo:
+        takeaway_content_html += """<div style="text-align: center; font-weight: bold; margin: 6px 0;">----------- Free -----------</div>"""
+        for name, qty in free_counts_promo.items():
+            takeaway_content_html += f"""<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+<span style="width: 20px;">{qty}</span>
+<span style="flex-grow: 1; padding-right: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{name}</span>
+</div>"""
 
-    # โครงสร้างใบเสร็จ HTML
+    # โครงสร้างใบเสร็จ HTML ทั้งหมด
     receipt_html = f"""<div style="background-color: #ffffff; color: #111111; font-family: 'Courier New', Courier, monospace; font-size: 13px; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25); max-width: 360px; margin: 10px auto; line-height: 1.4;">
 <div style="text-align: center; font-weight: bold;">
 <div>REPRINT CHECK</div>
@@ -533,10 +520,9 @@ with right:
 </div>
 <div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
 
-{top_excess_block}
-
 <div style="text-align: center; font-weight: bold; margin-bottom: 8px;">----- TAKE AWAY -----</div>
-{takeaway_items_html}
+{takeaway_content_html}
+
 <div style="border-bottom: 1px dashed #888; margin: 8px 0;"></div>
 <div style="display: flex; justify-content: space-between;">
 <span>Sub Total</span>
