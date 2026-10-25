@@ -360,6 +360,9 @@ free_value = sum(PRICE_MAP[name] * quantity for name, quantity in free_counts.it
 net = subtotal - free_value
 next_promo = get_next_promotion(total_pieces)
 
+# ข้อความชื่อโปรโมชั่นที่จะนำไปแสดงในใบเสร็จ
+promo_name_str = f"ซื้อ {promo[0]} แถม {promo[1]}" if promo else "-"
+
 # เตรียมข้อมูลสำหรับใบเสร็จ
 rows = []
 for name, quantity in edited.items():
@@ -479,6 +482,10 @@ with right:
 <div style="display: flex; justify-content: space-between;">
 <span>Sub Total</span>
 <span>{float(subtotal):.2f}</span>
+</div>
+<div style="display: flex; justify-content: space-between;">
+<span>PROMOTION</span>
+<span style="font-weight: bold; color: #d9534f;">{promo_name_str}</span>
 </div>
 <div style="display: flex; justify-content: space-between;">
 <span>Discount</span>
